@@ -1,0 +1,151 @@
+# master backend or db deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-master-deployment
+  labels:
+    app: redis-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+          app: redis-master
+  template:
+    metadata:
+      labels:
+        app: redis-master
+        tier: db
+    spec:
+      containers:
+      - name: master
+        image: redis:3.0.7-alpine
+        ports:
+        - containerPort: 6379
+
+#------------------------------------------------
+
+# master backend service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master-service
+  labels:
+    app: redis-master
+spec:
+  ports:
+    # the port that this service should serve on
+  - port: 6379
+    targetPort: 6379
+  selector:
+     app: redis-master
+
+#-------------------------------------------------
+
+# slave backend deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-slave
+  labels:
+    app: redis-slave
+spec:
+  replicas: 2
+  selector:
+      matchLabels:
+          app: redis-slave
+  template:
+    metadata:
+      labels:
+        app: redis-slave
+        tier: db
+    spec:
+      containers:
+      - name: worker
+        image: gcr.io/google_samples/gb-redisslave:v1
+        env:
+        - name: GET_HOSTS_FROM
+          value: dns
+          # If your cluster config does not include a dns service, then to
+          # instead access an environment variable to find the master
+          # service's host, comment out the 'value: dns' line above, and
+          # uncomment the line below.
+          # value: env
+        ports:
+        - containerPort: 6379
+#---------------------------------------------------------------
+
+# slave backend service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-slave
+  labels:
+    app: redis-slave
+spec:
+  ports:
+    # the port that this service should serve on
+  - port: 6379
+  selector:
+    app: redis-slave
+
+#---------------------------------------------------------------
+
+# Front-end web server deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas: 3
+  selector:
+     matchLabels:
+        app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: web
+    spec:
+      containers:
+      - name: php-redis
+        image: gcr.io/google_samples/gb-frontend:v3
+        env:
+        - name: GET_HOSTS_FROM
+          value: dns
+	  # If your cluster config does not include a dns service, then to
+          # instead access environment variables to find service host
+          # info, comment out the 'value: dns' line above, and uncomment the
+          # line below.
+          # value: env
+        ports:
+        - containerPort: 80
+#---------------------------------------------------------
+
+# Front-end web server service (NodePort)
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  # if your cluster supports it, uncomment the following to automatically create
+  # an external load-balanced IP for the frontend service.
+  # type: LoadBalancer
+  type: NodePort
+  ports:
+    # the port that this service should serve on
+    - port: 80
+      nodePort: 30080
+  selector:
+    app: frontend
+
+#-------------END------------------------------
