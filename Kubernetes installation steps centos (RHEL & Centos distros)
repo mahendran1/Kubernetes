@@ -1,0 +1,67 @@
+Check the file system type using command "blkid"
+If file system is ext4 the good to go else if xfs file system then make sure dtype (directory entry type) by using below command
+xfs_info / check the below line in output
+naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
+ftype must be set to 1 else docker will not work.
+
+# docker installation
+
+yum install yum-utils device-mapper-persistent-data lvm2
+yum-config-manager \
+  --add-repo \
+  https://download.docker.com/linux/centos/docker-ce.repo
+yum update && yum install docker-ce-18.06.2.ce
+mkdir /etc/docker
+
+# docker configuration file (Overlay and overlay storage drivers require dtype enabled)
+
+cat > /etc/docker/daemon.json <<EOF
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2",
+  "storage-opts": [
+    "overlay2.override_kernel_check=true"
+  ]
+}
+EOF
+
+mkdir -p /etc/systemd/system/docker.service.d
+# load confiuration from /etc/docker/daemon.json
+systemctl daemon-reload
+systemctl restart docker
+# adding google repo need to remove exclude=kube* from official code
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+setenforce 0
+sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+# install kubectl kubeadm and kubelet kubernetes-cni need to installed 0.6.0 for version 1.12.0 kubernetes
+yum install -y kubelet-1.12.0-0 kubeadm-1.12.0-0 kubectl-1.12.0-0 kubernetes-cni-0.6.0-0 --disableexcludes=kubernetes
+systemctl enable --now kubelet
+
+#You should ensure net.bridge.bridge-nf-call-iptables is set to 1 in your sysctl config
+
+cat <<EOF >  /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system
+
+#Make sure that the br_netfilter module is loaded before this step. This can be done by running lsmod | grep br_netfilter. To load it explicitly call modprobe br_netfilter.
+
+#intitate kubernetes installation (pod network 10.244.0.0/16 required for flannel)
+
+kubeadm init --pod-network-cidr=10.244.0.0/16 --kubernetes-version=1.12.0
+
+join other system using generated token
