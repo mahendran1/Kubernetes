@@ -1,5 +1,4 @@
 # master backend or db deployment
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,11 +21,8 @@ spec:
         image: redis:3.0.7-alpine
         ports:
         - containerPort: 6379
-
-#------------------------------------------------
-
+---
 # master backend service
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -40,11 +36,8 @@ spec:
     targetPort: 6379
   selector:
      app: redis-master
-
-#-------------------------------------------------
-
+---
 # slave backend deployment
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -75,10 +68,8 @@ spec:
           # value: env
         ports:
         - containerPort: 6379
-#---------------------------------------------------------------
-
+---
 # slave backend service
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -91,11 +82,8 @@ spec:
   - port: 6379
   selector:
     app: redis-slave
-
-#---------------------------------------------------------------
-
+---
 # Front-end web server deployment
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -126,10 +114,8 @@ spec:
           # value: env
         ports:
         - containerPort: 80
-#---------------------------------------------------------
-
+---
 # Front-end web server service (NodePort)
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -147,5 +133,3 @@ spec:
       nodePort: 30080
   selector:
     app: frontend
-
-#-------------END------------------------------
