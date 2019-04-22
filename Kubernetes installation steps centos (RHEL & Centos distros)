@@ -1,8 +1,8 @@
-Check the file system type using command "blkid"
-If file system is ext4 the good to go else if xfs file system then make sure dtype (directory entry type) by using below command
-xfs_info / check the below line in output
-naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
-ftype must be set to 1 else docker will not work.
+#Check the file system type using command "blkid"
+#If file system is ext4 the good to go else if xfs file system then make sure dtype (directory entry type) by using below command
+#xfs_info / check the below line in output
+#naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
+#ftype must be set to 1 else docker will not work.
 
 # docker installation
 
